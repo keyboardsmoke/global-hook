@@ -1,4 +1,5 @@
 capstone/
+keystone/
 capstone-build/
 CMakeFiles/
 CMakeCache.txt
