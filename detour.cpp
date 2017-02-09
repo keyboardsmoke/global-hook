@@ -158,7 +158,6 @@ void *detour_fn(void *src, void *dest)
 	
 	printf("Size To Save: 0x%x\n", sizeToSave);
 	
-	/*
 	trampoline = malloc(page_size);
 	
 	if (!trampoline)
@@ -179,7 +178,7 @@ void *detour_fn(void *src, void *dest)
 	memcpy(((unsigned char *)trampoline) + sizeToSave, fubtramp.data(), fubtramp.size());
 	
 	if (set_page_protections_for_address(src, page_size, PROT_READ | PROT_WRITE | PROT_EXEC) == -1)
-		goto bad_ret;*/
+		goto bad_ret;
 	
 	// We have the trampolines generated, and saved to the trampoline as well.
 	// We can overwrite src with the fub.
