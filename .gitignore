@@ -10,3 +10,15 @@ ArmHook.id0
 ArmHook.id1
 ArmHook.nam
 ArmHook.idb
+
+# Visual Studio
+.vs/
+ALL_BUILD.*
+ZERO_CHECK.*
+GlobalHook.*
+GlobalHook.dir
+Debug/
+MinSizeRel/
+RelWithDebInfo/
+Release/
+Win32/

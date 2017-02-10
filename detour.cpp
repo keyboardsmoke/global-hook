@@ -1,9 +1,15 @@
+#ifdef _WIN32
+#include <Windows.h>
+#else
 #include <sys/mman.h>
+#include <unistd.h>
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-#include <unistd.h>
+
 #include <string.h>
 #include <malloc.h>
 #include <vector>
@@ -48,11 +54,23 @@
 #error Your compiler type is not supported.
 #endif
 
+#ifdef _WIN32
+#define DETOUR_VM_PROTECTION_FLAGS PAGE_EXECUTE_READWRITE
+#else
+#define DETOUR_VM_PROTECTION_FLAGS (PROT_READ | PROT_WRITE | PROT_EXEC)
+#endif
+
 int set_page_protections_for_address(void *addr, size_t page_size, int prot)
 {
+#ifdef _WIN32
+	DWORD dwDummy;
+	return VirtualProtect(addr, 1, prot, &dwDummy);
+#else
 	void *page_start = (void *)((uintptr_t) addr & -page_size);
 	
+
 	return mprotect(page_start, page_size, prot);
+#endif
 }
 
 void print_disasm(csh handle, void *p, size_t size) {
@@ -79,7 +97,7 @@ bool create_unconditional_branch_ks(void *src, void *dest, std::vector<unsigned 
 	err = ks_open(COMPILER_KS_ARCH, COMPILER_KS_MODE, &ks);
 	
 #if defined COMPILER_INTERNAL_X64 || defined COMPILER_INTERNAL_X86
-	char fmt[] = "JMP %p";
+	char fmt[] = "JMP 0x%X";
 #elif COMPILER_INTERNAL_THUMB
 	char fmt[] = "B %p";
 #elif COMPILER_INTERNAL_ARM
@@ -127,7 +145,13 @@ void *detour_fn(void *src, void *dest)
 	std::vector<unsigned char> fub, fubtramp;
 	//
 	
+#ifdef _WIN32
+	SYSTEM_INFO systemInfo;
+	GetSystemInfo(&systemInfo);
+	page_size = systemInfo.dwPageSize;
+#else
 	page_size = sysconf(_SC_PAGESIZE);
+#endif
 	
 	if (page_size == -1)
 		return nullptr;
@@ -138,6 +162,8 @@ void *detour_fn(void *src, void *dest)
 	if (cs_open(COMPILER_CS_ARCH, COMPILER_CS_MODE, &handle) != CS_ERR_OK)
 		return nullptr;
 	
+	print_disasm(handle, src, 16);
+
 	// We can create the trampoline for the src/dest now, so we know how many bytes to save
 	if (!create_unconditional_branch_ks(src, dest, &fub))
 		goto bad_ret;
@@ -165,7 +191,7 @@ void *detour_fn(void *src, void *dest)
 	
 	printf("Trampoline Allocated (%p)\n", trampoline);
 	
-	if (set_page_protections_for_address(trampoline, page_size, PROT_READ | PROT_WRITE | PROT_EXEC) == -1)
+	if (set_page_protections_for_address(trampoline, page_size, DETOUR_VM_PROTECTION_FLAGS) == -1)
 		goto bad_ret;
 	
 	// Backup the data overwritten in the src
@@ -177,7 +203,7 @@ void *detour_fn(void *src, void *dest)
 	
 	memcpy(((unsigned char *)trampoline) + sizeToSave, fubtramp.data(), fubtramp.size());
 	
-	if (set_page_protections_for_address(src, page_size, PROT_READ | PROT_WRITE | PROT_EXEC) == -1)
+	if (set_page_protections_for_address(src, page_size, DETOUR_VM_PROTECTION_FLAGS) == -1)
 		goto bad_ret;
 	
 	// We have the trampolines generated, and saved to the trampoline as well.
@@ -196,7 +222,8 @@ bad_ret:
 		trampoline = nullptr;
 	}
 
-	cs_free(insn, 1);
+	if (insn != nullptr)
+		cs_free(insn, 1);
 	
 	return nullptr;
 }

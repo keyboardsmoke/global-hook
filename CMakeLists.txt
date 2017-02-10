@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.2)
-project(ArmHook CXX)
+project(GlobalHook CXX)
 
 set (CMAKE_CXX_STANDARD 14)
 
@@ -14,5 +14,10 @@ endif()
 
 #message(AUTHOR_WARNING ${LIBCAPSTONE_LIBRARIES})
 
-add_executable(ArmHook main.cpp detour.cpp)
-target_link_libraries(ArmHook "${CMAKE_CURRENT_SOURCE_DIR}/capstone/libcapstone.a" "${CMAKE_CURRENT_SOURCE_DIR}/keystone/build-lib/llvm/lib/libkeystone.a")
+add_executable(GlobalHook main.cpp detour.cpp detour.hpp)
+
+if (WIN32)
+	target_link_libraries(GlobalHook "${CMAKE_CURRENT_SOURCE_DIR}/capstone/MinSizeRel/capstone.lib" "${CMAKE_CURRENT_SOURCE_DIR}/keystone/llvm/lib/MinSizeRel/keystone.lib")
+else()
+	target_link_libraries(GlobalHook "${CMAKE_CURRENT_SOURCE_DIR}/capstone/libcapstone.a" "${CMAKE_CURRENT_SOURCE_DIR}/keystone/build-lib/llvm/lib/libkeystone.a")
+endif()

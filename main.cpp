@@ -5,7 +5,6 @@
 typedef void (*main_t)();
 
 void main_fn() {
-	asm __volatile__("nop; nop; nop; nop; nop; nop; nop; nop; nop; nop; nop; nop;");
 	printf("Main!\n");
 }
 
